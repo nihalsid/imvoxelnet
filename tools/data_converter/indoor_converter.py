@@ -37,12 +37,12 @@ def create_indoor_info_file(data_path,
     else:
         dataset = ScanNetData
         train_dataset = dataset(root_path=data_path, split='train')
-        val_dataset = dataset(root_path=data_path, split='val')
+        val_dataset = dataset(root_path=data_path, split='test')
 
     infos_train = train_dataset.get_infos(num_workers=workers, has_label=True)
     mmcv.dump(infos_train, train_filename, 'pkl')
     print(f'{pkl_prefix} info train file is saved to {train_filename}')
 
-    infos_val = val_dataset.get_infos(num_workers=workers, has_label=True)
+    infos_val = val_dataset.get_infos(num_workers=workers, has_label=False)
     mmcv.dump(infos_val, val_filename, 'pkl')
     print(f'{pkl_prefix} info val file is saved to {val_filename}')

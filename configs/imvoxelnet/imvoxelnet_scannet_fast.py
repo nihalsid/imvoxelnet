@@ -34,8 +34,8 @@ model = dict(
 train_cfg = dict()
 test_cfg = dict(
     nms_pre=1000,
-    iou_thr=.25,
-    score_thr=.01)
+    iou_thr=.10,
+    score_thr=.05)
 img_norm_cfg = dict(mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 
 dataset_type = 'ScanNetMultiViewDataset'
@@ -63,7 +63,7 @@ train_pipeline = [
 test_pipeline = [
     dict(
         type='MultiViewPipeline',
-        n_images=50,
+        n_images=100,
         transforms=[
             dict(type='LoadImageFromFile'),
             dict(type='Resize', img_scale=(640, 480), keep_ratio=True),

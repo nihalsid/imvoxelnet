@@ -39,7 +39,7 @@ def export_one_scan(scan_name,
             mesh_file, agg_file, seg_file, meta_file, label_map_file, None,
             test_mode)
 
-    if not test_mode:
+    if not test_mode and osp.exists(agg_file) and osp.exists(seg_file):
         mask = np.logical_not(np.in1d(semantic_labels, DONOTCARE_CLASS_IDS))
         mesh_vertices = mesh_vertices[mask, :]
         semantic_labels = semantic_labels[mask]
@@ -61,19 +61,17 @@ def export_one_scan(scan_name,
         if N > max_num_point:
             choices = np.random.choice(N, max_num_point, replace=False)
             mesh_vertices = mesh_vertices[choices, :]
-            if not test_mode:
+            if not test_mode and osp.exists(agg_file) and osp.exists(seg_file):
                 semantic_labels = semantic_labels[choices]
                 instance_labels = instance_labels[choices]
 
     np.save(f'{output_filename_prefix}_vert.npy', mesh_vertices)
     if not test_mode:
-        np.save(f'{output_filename_prefix}_sem_label.npy', semantic_labels)
-        np.save(f'{output_filename_prefix}_ins_label.npy', instance_labels)
-        np.save(f'{output_filename_prefix}_unaligned_bbox.npy',
-                unaligned_bboxes)
-        np.save(f'{output_filename_prefix}_aligned_bbox.npy', aligned_bboxes)
-        np.save(f'{output_filename_prefix}_axis_align_matrix.npy',
-                axis_align_matrix)
+        # np.save(f'{output_filename_prefix}_sem_label.npy', semantic_labels)
+        # np.save(f'{output_filename_prefix}_ins_label.npy', instance_labels)
+        # np.save(f'{output_filename_prefix}_unaligned_bbox.npy', unaligned_bboxes)
+        # np.save(f'{output_filename_prefix}_aligned_bbox.npy', aligned_bboxes)
+        np.save(f'{output_filename_prefix}_axis_align_matrix.npy', axis_align_matrix)
 
 
 def batch_export(max_num_point,
@@ -99,11 +97,11 @@ def batch_export(max_num_point,
             print('File already exists. skipping.')
             print('-' * 20 + 'done')
             continue
-        try:
-            export_one_scan(scan_name, output_filename_prefix, max_num_point,
-                            label_map_file, scannet_dir, test_mode)
-        except Exception:
-            print(f'Failed export scan: {scan_name}')
+        # try:
+        export_one_scan(scan_name, output_filename_prefix, max_num_point,
+                        label_map_file, scannet_dir, test_mode)
+        # except Exception as err:
+        #     print(f'Failed export scan: {scan_name} | Error: {err}')
         print('-' * 20 + 'done')
 
 

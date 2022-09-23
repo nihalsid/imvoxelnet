@@ -1,12 +1,16 @@
 import argparse
-from os import path as osp
+import os
 
+import mmcv
+import numpy as np
+from os import path as osp
 from tools.data_converter import indoor_converter as indoor
 from tools.data_converter import kitti_converter as kitti
 from tools.data_converter import lyft_converter as lyft_converter
 from tools.data_converter import nuscenes_converter as nuscenes_converter
 from tools.data_converter import nuscenes_monocular_converter
 from tools.data_converter.create_gt_database import create_groundtruth_database
+from tools.data_converter.scannet_data_utils import ScanNetData
 
 
 def kitti_data_prep(root_path, info_prefix, version, out_dir):
@@ -125,6 +129,39 @@ def scannet_data_prep(root_path, info_prefix, out_dir, workers):
     """
     indoor.create_indoor_info_file(
         root_path, info_prefix, out_dir, workers=workers)
+
+
+def phonedata_data_prep(root_path, info_prefix, out_dir):
+    """Prepare the info file for phonedata dataset.
+
+    Args:
+        root_path (str): Path of dataset root.
+        info_prefix (str): The prefix of info filenames.
+        out_dir (str): Output directory of the generated info file.
+    """
+    out_dir = root_path if out_dir is None else out_dir
+    val_filename = os.path.join(out_dir, f'{info_prefix}_infos_val.pkl')
+    val_dataset = ScanNetData(root_path=root_path, split='val')
+    infos_val = []
+    for sample_idx in val_dataset.sample_id_list:
+        info = dict()
+        pc_info = {'num_features': 6, 'lidar_idx': sample_idx}
+        info['point_cloud'] = pc_info
+        # update with RGB image paths if exist
+        info['intrinsics'] = val_dataset.get_intrinsics(sample_idx)
+        all_extrinsics = val_dataset.get_extrinsics(sample_idx)
+        all_img_paths = val_dataset.get_images(sample_idx)
+        # some poses in ScanNet are invalid
+        extrinsics, img_paths = [], []
+        for extrinsic, img_path in zip(all_extrinsics, all_img_paths):
+            if np.all(np.isfinite(extrinsic)):
+                img_paths.append(img_path)
+                extrinsics.append(extrinsic)
+        info['extrinsics'] = extrinsics
+        info['img_paths'] = img_paths
+        infos_val.append(info)
+    mmcv.dump(infos_val, val_filename, 'pkl')
+    print(f'{info_prefix} info val file is saved to {val_filename}')
 
 
 def sunrgbd_data_prep(root_path, info_prefix, out_dir, workers, monocular):
@@ -282,6 +319,12 @@ if __name__ == '__main__':
             info_prefix=args.extra_tag,
             out_dir=args.out_dir,
             workers=args.workers
+        )
+    elif args.dataset == 'phonedata':
+        phonedata_data_prep(
+            root_path=args.root_path,
+            info_prefix=args.extra_tag,
+            out_dir=args.out_dir,
         )
     elif args.dataset == 'sunrgbd':
         sunrgbd_data_prep(

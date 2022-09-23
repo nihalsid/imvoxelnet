@@ -33,7 +33,7 @@ class ScanNetData(object):
         }
         assert split in ['train', 'val', 'test']
         split_file = osp.join(self.root_dir, 'meta_data',
-                              f'scannetv2_{split}.txt')
+                              f'scannetv2_{split}_overfit.txt')
         mmcv.check_file_exist(split_file)
         self.sample_id_list = mmcv.list_from_file(split_file)
         self.test_mode = (split == 'test')
@@ -100,11 +100,12 @@ class ScanNetData(object):
             info['point_cloud'] = pc_info
             pts_filename = osp.join(self.root_dir, 'scannet_instance_data',
                                     f'{sample_idx}_vert.npy')
-            points = np.load(pts_filename)
-            mmcv.mkdir_or_exist(osp.join(self.root_dir, 'points'))
-            points.tofile(
-                osp.join(self.root_dir, 'points', f'{sample_idx}.bin'))
-            info['pts_path'] = osp.join('points', f'{sample_idx}.bin')
+            if osp.exists(pts_filename):
+                points = np.load(pts_filename)
+                mmcv.mkdir_or_exist(osp.join(self.root_dir, 'points'))
+                points.tofile(
+                    osp.join(self.root_dir, 'points', f'{sample_idx}.bin'))
+                info['pts_path'] = osp.join('points', f'{sample_idx}.bin')
 
             # update with RGB image paths if exist
             if os.path.exists(osp.join(self.root_dir, 'posed_images')):
@@ -177,6 +178,11 @@ class ScanNetData(object):
                         self.cat_ids2class[classes[i]]
                         for i in range(annotations['gt_num'])
                     ])
+                axis_align_matrix = self.get_axis_align_matrix(sample_idx)
+                annotations['axis_align_matrix'] = axis_align_matrix  # 4x4
+                info['annos'] = annotations
+            else:
+                annotations = {}
                 axis_align_matrix = self.get_axis_align_matrix(sample_idx)
                 annotations['axis_align_matrix'] = axis_align_matrix  # 4x4
                 info['annos'] = annotations

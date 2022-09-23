@@ -1,4 +1,6 @@
 # Byte-compiled / optimized / DLL files
+results/
+mmdet3d/ops/rotated_iou/cuda_op
 __pycache__/
 *.py[cod]
 *$py.class

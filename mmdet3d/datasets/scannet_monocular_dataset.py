@@ -16,7 +16,12 @@ class ScanNetMultiViewDataset(MultiViewMixin, Custom3DDataset):
     def get_data_info(self, index):
         info = self.data_infos[index]
         input_dict = defaultdict(list)
-        axis_align_matrix = info['annos']['axis_align_matrix'].astype(np.float32)
+        if 'annos' in info:
+            axis_align_matrix = info['annos']['axis_align_matrix'].astype(np.float32)
+            print('annos present')
+        else:
+            axis_align_matrix = np.eye(4)
+            print('annos not present')
         for i in range(len(info['img_paths'])):
             img_filename = osp.join(self.data_root, info['img_paths'][i])
             input_dict['img_prefix'].append(None)
@@ -28,7 +33,8 @@ class ScanNetMultiViewDataset(MultiViewMixin, Custom3DDataset):
         input_dict['lidar2img'] = dict(
             extrinsic=input_dict['lidar2img'],
             intrinsic=info['intrinsics'].astype(np.float32),
-            origin=origin.astype(np.float32)
+            origin=origin.astype(np.float32),
+            axis_align=axis_align_matrix
         )
 
         if not self.test_mode:

@@ -1,7 +1,11 @@
 import argparse
+import json
+from pathlib import Path
+
 import mmcv
 import os
 import torch
+import numpy as np
 from mmcv import Config, DictAction
 from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
 from mmcv.runner import get_dist_info, init_dist, load_checkpoint, wrap_fp16_model
@@ -10,7 +14,13 @@ from mmdet3d.apis import single_gpu_test
 from mmdet3d.datasets import build_dataloader, build_dataset
 from mmdet3d.models import build_detector
 from mmdet.apis import multi_gpu_test, set_random_seed
+
+from mmdet3d.utils.distinct_colors import DistinctColors
+from mmdet3d.utils.misc import write_bbox
 from tools.fuse_conv_bn import fuse_module
+
+# import pydevd_pycharm
+# pydevd_pycharm.settrace('131.159.40.27', port=6789, stdoutToServer=True, stderrToServer=True)
 
 
 def parse_args():
@@ -102,10 +112,11 @@ def main():
     # build the dataloader
     samples_per_gpu = cfg.data.test.pop('samples_per_gpu', 1)
     dataset = build_dataset(cfg.data.test)
+    print('dataset_len', len(dataset))
     data_loader = build_dataloader(
         dataset,
         samples_per_gpu=samples_per_gpu,
-        workers_per_gpu=cfg.data.workers_per_gpu,
+        workers_per_gpu=0,#cfg.data.workers_per_gpu,
         dist=distributed,
         shuffle=False)
 
@@ -146,7 +157,28 @@ def main():
         if args.eval:
             dataset.evaluate(outputs, args.eval, **kwargs)
         if args.show:
-            dataset.show(outputs, args.show_dir)
+            distinct_colors = DistinctColors()
+            # dataset.show(outputs, args.show_dir)
+            for oidx, output in enumerate(outputs):
+                corners = output['boxes_3d'].corners.numpy()
+                corners_shape = corners.shape
+                corners_4 = np.concatenate((corners.reshape(-1, 3), np.ones((corners_shape[0] * corners_shape[1], 1))), axis=1)
+                info = dataset.get_data_info(oidx)
+                ax_align = info['lidar2img']['axis_align']
+                corners_4 = (np.linalg.inv(ax_align) @ corners_4.T).T[:, :3]
+                # corners_4 = corners_4[:, :3]
+                corners = corners_4.reshape(corners_shape)
+                exports = []
+                result_path = f"results/{Path(info['img_info'][0]['filename']).parent.stem}"
+                Path(result_path).mkdir(exist_ok=True, parents=True)
+                for idx in range(output['labels_3d'].shape[0]):
+                    write_bbox(corners[idx, :], distinct_colors.get_color(output['labels_3d'][idx]), f"{result_path}/{dataset.CLASSES[output['labels_3d'][idx]]}_{idx:02d}.obj")
+                    print(output['scores_3d'][idx], output['labels_3d'][idx])
+                    exports.append({
+                        'label': dataset.CLASSES[output['labels_3d'][idx]],
+                        'corners': corners[idx, :].tolist()
+                    })
+                Path(f"{result_path}/exports.json").write_text(json.dumps(exports))
 
 
 if __name__ == '__main__':

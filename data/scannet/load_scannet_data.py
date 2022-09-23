@@ -103,16 +103,21 @@ def export(mesh_file,
     mesh_vertices = scannet_utils.read_mesh_vertices_rgb(mesh_file)
 
     # Load scene axis alignment matrix
-    lines = open(meta_file).readlines()
+    if os.path.exists(meta_file):
+        lines = open(meta_file).readlines()
     # test set data doesn't have align_matrix
     axis_align_matrix = np.eye(4)
-    for line in lines:
-        if 'axisAlignment' in line:
-            axis_align_matrix = [
-                float(x)
-                for x in line.rstrip().strip('axisAlignment = ').split(' ')
-            ]
-            break
+    # TODO: nihalsid: now all the pose centering etc comes from exported poses
+    # axis_align_matrix[:3, 3] = -mesh_vertices[:, 0:3].mean(0)
+    # axis_align_matrix[2, 3] = 0
+    # TODO: nihalsid; uncomment -> remove for testing
+    # for line in lines:
+    #     if 'axisAlignment' in line:
+    #         axis_align_matrix = [
+    #             float(x)
+    #             for x in line.rstrip().strip('axisAlignment = ').split(' ')
+    #         ]
+    #         break
     axis_align_matrix = np.array(axis_align_matrix).reshape((4, 4))
 
     # perform global alignment of mesh vertices
@@ -123,7 +128,7 @@ def export(mesh_file,
                                            axis=1)
 
     # Load semantic and instance labels
-    if not test_mode:
+    if not test_mode and os.path.exists(agg_file) and os.path.exists(seg_file):
         object_id_to_segs, label_to_segs = read_aggregation(agg_file)
         seg_to_verts, num_verts = read_segmentation(seg_file)
         label_ids = np.zeros(shape=(num_verts), dtype=np.uint32)

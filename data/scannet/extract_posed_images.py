@@ -1,4 +1,6 @@
 # Modified from https://github.com/ScanNet/ScanNet/blob/master/SensReader/python/SensorData.py # noqa
+from pathlib import Path
+
 import imageio
 import mmcv
 import numpy as np
@@ -159,9 +161,10 @@ def process_scene(path, limit, idx):
 
 def process_directory(path, limit, nproc):
     print(f'processing {path}')
+    print([x for x in os.listdir(path) if x in Path('meta_data/scannetv2_test_overfit.txt').read_text().splitlines()])
     mmcv.track_parallel_progress(
         func=partial(process_scene, path, limit),
-        tasks=os.listdir(path),
+        tasks=[x for x in os.listdir(path) if x in Path('meta_data/scannetv2_test_overfit.txt').read_text().splitlines()],
         nproc=nproc)
 
 
@@ -175,5 +178,5 @@ if __name__ == '__main__':
     if os.path.exists('scans'):
         process_directory('scans', args.max_images_per_scene, args.nproc)
     # process test scenes
-    if os.path.exists('scans_test'):
-        process_directory('scans_test', args.max_images_per_scene, args.nproc)
+    # if os.path.exists('scans_test'):
+    #     process_directory('scans_test', args.max_images_per_scene, args.nproc)
